@@ -50,6 +50,9 @@ print(client.chat.completions.create(
 ).choices[0].message.content)
 ```
 
+That exact script is [scripts/client_demo.py](scripts/client_demo.py) — verified against the
+phone in airplane mode with the stock `openai` package and no phone-side changes.
+
 Or plain curl (PowerShell needs `--%`, otherwise it eats the quotes):
 
 ```powershell

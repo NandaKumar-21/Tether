@@ -1,0 +1,244 @@
+===============================================
+TETHER - STAGE RUNBOOK
+read this on your phone, not the shared screen
+===============================================
+
+REPO   github.com/NandaKumar-21/Tether
+APP    com.tether.app
+PORT   8080
+
+-----------------------------------------------
+ADB IS NOT ON PATH. Use the full path:
+-----------------------------------------------
+
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+
+Paste that once into the PowerShell window and
+every "& $adb ..." line below will work.
+
+
+===============================================
+BEFORE YOU GO ON STAGE
+===============================================
+
+1. Phone plugged in, unlocked, screen on.
+2. Run the full demo once to warm the model:
+
+   powershell -ExecutionPolicy Bypass -File scripts\demo.ps1
+
+3. Leave it. Do NOT reboot after this.
+
+Warming matters: cold load is 22-25s of silence,
+warm is 0s.
+
+
+===============================================
+BEAT 1 - A REAL DEV TOOL, NOT CURL
+===============================================
+
+   python scripts\client_demo.py
+
+Shows:
+  models on this endpoint: ['gemma-3-1b-it-int4']
+  answer: A race condition occurs when...
+  usage: 17 prompt + 35 completion tokens
+
+SAY: "This is the stock openai package. Not one
+line of it knows it is talking to a phone. The
+phone is offline."
+
+Takes about 2 seconds.
+
+
+===============================================
+BEAT 2 - PROVE THERE IS NO NETWORK
+===============================================
+
+   powershell -ExecutionPolicy Bypass -File scripts\demo.ps1 -SkipClear
+
+Prints, in order:
+  airplane mode ON, wifi OFF, mobile data OFF
+  Active default network: none
+  Wi-Fi is disabled
+  ping 8.8.8.8 -> Network is unreachable
+  DNS dead: huggingface.co does not resolve
+  then the answer, about 1 second
+
+Takes about 8 seconds with -SkipClear.
+
+SAY: "airplane_mode is a flag and flags lie.
+This disables the radios and shows the routing
+table is empty."
+
+
+===============================================
+BEAT 3 - THE CAMERA
+===============================================
+
+On the phone: tap SCAN
+Point at a judge's laptop or any printed text.
+Tap CAPTURE.
+Screen shows the recognised text.
+
+Then on the laptop:
+
+   python scripts\client_demo.py
+
+The answer now uses what the camera read.
+Context is consumed by exactly ONE request.
+
+SAY: "ML Kit, models bundled in the APK, still
+no network."
+
+
+===============================================
+BEAT 4 - THE VOICE
+===============================================
+
+On the phone: tap MIC, then TAP TO SPEAK.
+Say: "What is a race condition"
+
+Transcript appears, then the answer below it.
+About 10 seconds for a long answer.
+
+SAY: "Offline speech recognition, and the
+transcript goes through the same HTTP endpoint
+the laptop uses."
+
+
+===============================================
+IF SOMETHING BREAKS
+===============================================
+
+ANSWER COMES BACK EMPTY
+-----------------------
+   powershell -ExecutionPolicy Bypass -File scripts\fix.ps1
+
+Takes 25 seconds. Wipes the corrupt MediaPipe
+GPU cache, reloads, prints READY.
+This is the ONE known cause of empty replies.
+
+
+CONNECTION REFUSED / CURL HANGS
+-------------------------------
+   & $adb forward tcp:8080 tcp:8080
+
+The forward is dropped by unplugging the cable
+or by a reboot. Re-run it.
+
+
+APP NOT RUNNING
+---------------
+   & $adb shell am start -n com.tether.app/.MainActivity
+
+Server auto-starts with the app. Wait ~22s for
+the model, then check:
+
+   curl.exe -s http://127.0.0.1:8080/health
+
+
+PHONE REBOOTED
+--------------
+Just run demo.ps1. It handles a phone that comes
+back online with wifi on. Verified.
+The model file survives reboot. Never re-push it.
+
+
+DEVICE NOT FOUND
+----------------
+   & $adb devices
+Unplug, replug, unlock the phone, accept the
+USB debugging prompt if it appears.
+
+
+===============================================
+IF A JUDGE DOES NOT BELIEVE IT IS ON-DEVICE
+===============================================
+
+Hide the model and show it break:
+
+   & $adb shell mv /data/local/tmp/llm/gemma3-1b-it-int4.task /data/local/tmp/llm/hidden
+   & $adb shell am force-stop com.tether.app
+   & $adb shell am start -n com.tether.app/.MainActivity
+   curl.exe -s http://127.0.0.1:8080/health
+
+Shows:  "model_loaded":false
+        "model_path":"not found"
+
+And a request returns:
+   "model file not found or unreadable"
+
+Put it back:
+
+   & $adb shell mv /data/local/tmp/llm/hidden /data/local/tmp/llm/gemma3-1b-it-int4.task
+   & $adb shell am force-stop com.tether.app
+   & $adb shell am start -n com.tether.app/.MainActivity
+
+Wait 25 seconds, then verify:
+
+   curl.exe -s http://127.0.0.1:8080/health
+
+Must show "model_loaded":true before you continue.
+
+DO NOT do this unless challenged. It costs 60s.
+
+
+===============================================
+NUMBERS TO QUOTE
+===============================================
+
+Model      Gemma 3 1B IT, int4, 529 MB
+Runtime    MediaPipe LLM Inference 0.10.24
+Backend    GPU (Adreno, via OpenCL)
+Speed      ~40 tokens/sec
+Latency    ~1.0s for a 2-sentence answer
+Cold load  22-25s
+Warm load  0s
+Device     vivo I2501, Snapdragon 8 Elite, 12 GB
+Context    2048 tokens
+
+Endpoints
+  POST /v1/chat/completions
+  GET  /v1/models
+  GET  /health
+
+
+===============================================
+IF ASKED: WHERE DOES THE ANSWER COME FROM
+===============================================
+
+curl on laptop
+  -> adb forward, over the USB cable
+  -> phone port 8080, NanoHTTPD in a
+     foreground service
+  -> TetherServer routes /v1/chat/completions
+  -> prompt wrapped in Gemma 3 turn format
+  -> LlmEngine.generate
+  -> MediaPipe native, Adreno GPU via OpenCL
+  -> weights read from
+     /data/local/tmp/llm/gemma3-1b-it-int4.task
+  -> answer back up the same path
+
+It is computed one token at a time from 1
+billion int4 parameters. Nothing is cached and
+nothing is retrieved.
+
+
+===============================================
+DO NOT DO THESE ON STAGE
+===============================================
+
+- Do not reboot the phone. Cold load is 25s.
+- Do not ask for long code generation. The 1B
+  model rambles and emits stray characters.
+  Good prompts, all verified:
+    What is a race condition
+    What is a mutex
+    TCP vs UDP in one sentence
+    Capital of Japan
+    17 times 3
+- Do not trust the airplane mode icon alone.
+  The ROM re-enables wifi after a reboot.
+  demo.ps1 disables the radios every run.
+- Do not unplug the USB cable. It drops the
+  adb forward.
