@@ -21,14 +21,43 @@ object LlmEngine {
         "/sdcard/Android/data/com.tether.app/files/gemma3-1b-it-int4.task"
     )
 
-    /** Tried in order until one initialises. Covers GPU-unavailable and KV-cache-too-small. */
+    /**
+     * Tried in order until one initialises.
+     *
+     * gemma-4-E4B-it.litertlm is deliberately NOT here. MediaPipe 0.10.24 rejects the
+     * LiteRT-LM container outright (RET_CHECK model_data.cc:424, "Error building tflite
+     * model"), and on 0.10.35 the 3.4 GB load killed the process in a restart loop.
+     * Re-adding it needs the LiteRT-LM runtime, not a MediaPipe version bump.
+     *
+     * ctx 4096 is also absent: the 1B .task is built with a 2048 KV cache and 4096
+     * fails with INVALID_ARGUMENT.
+     */
+    /**
+     * gemma-4-E4B-it.litertlm is deliberately absent.
+     *
+     * On tasks-genai 0.10.24 the container is rejected at parse time
+     * (RET_CHECK model_data.cc:424). On 0.10.35 LitertLmLoader::Initialize does run,
+     * so the format IS supported there, but loading 3.4 GB kills the process in a
+     * restart loop even with largeHeap and ctx 1024 - largeHeap raises the Java heap,
+     * not the native allocation that actually blows. Getting E4B running needs a
+     * smaller quantisation or the standalone LiteRT-LM runtime, not a version bump.
+     *
+     * ctx 4096 is absent too: the 1B .task has a 2048 KV cache and 4096 fails with
+     * INVALID_ARGUMENT.
+     */
     private val INIT_LADDER = listOf(
-        Config(LlmInference.Backend.GPU, 2048),
-        Config(LlmInference.Backend.GPU, 1024),
-        Config(LlmInference.Backend.CPU, 1024)
+        Config(LlmInference.Backend.GPU, 2048, null, "gemma-3-1b-it-int4"),
+        Config(LlmInference.Backend.GPU, 1024, null, "gemma-3-1b-it-int4"),
+        Config(LlmInference.Backend.CPU, 1024, null, "gemma-3-1b-it-int4")
     )
 
-    private data class Config(val backend: LlmInference.Backend, val maxTokens: Int)
+    private data class Config(
+        val backend: LlmInference.Backend,
+        val maxTokens: Int,
+        /** null means "use the default .task path". */
+        val path: String?,
+        val name: String
+    )
 
     private var llm: LlmInference? = null
 
@@ -57,18 +86,16 @@ object LlmEngine {
         appContext = context.applicationContext
         if (llm != null) return
 
-        val path = modelPath()
-        if (path == null) {
-            lastError = "model file not found or unreadable. adb push to ${CANDIDATE_PATHS[0]}"
-            ServerState.log("MODEL MISSING: ${CANDIDATE_PATHS[0]}")
-            return
-        }
-
-        val sizeMb = File(path).length() / (1024 * 1024)
-        ServerState.log("loading model ($sizeMb MB) from $path")
+        val defaultPath = modelPath()
 
         for (cfg in INIT_LADDER) {
+            val path = cfg.path ?: defaultPath ?: continue
+            val f = File(path)
+            if (!f.exists() || !f.canRead()) continue
+
+            val sizeMb = f.length() / (1024 * 1024)
             val started = System.currentTimeMillis()
+            ServerState.log("trying ${cfg.name} ($sizeMb MB) ${cfg.backend}/ctx ${cfg.maxTokens}")
             try {
                 val options = LlmInference.LlmInferenceOptions.builder()
                     .setModelPath(path)
@@ -83,14 +110,15 @@ object LlmEngine {
 
                 val took = System.currentTimeMillis() - started
                 ServerState.modelLoaded = true
+                ServerState.modelName = cfg.name
                 ServerState.backend = "${cfg.backend} / ctx ${cfg.maxTokens}"
-                ServerState.log("model READY on ${cfg.backend} (ctx ${cfg.maxTokens}) in ${took}ms")
-                Log.i(TAG, "init ok: ${cfg.backend} ${cfg.maxTokens}")
+                ServerState.log("model READY ${cfg.name} on ${cfg.backend} (ctx ${cfg.maxTokens}) in ${took}ms")
+                Log.i(TAG, "init ok: ${cfg.name} ${cfg.backend} ${cfg.maxTokens}")
                 return
             } catch (t: Throwable) {
                 lastError = "${t.javaClass.simpleName}: ${t.message}"
-                ServerState.log("init failed on ${cfg.backend}/${cfg.maxTokens}: ${t.message}")
-                Log.w(TAG, "init failed ${cfg.backend}/${cfg.maxTokens}", t)
+                ServerState.log("init failed ${cfg.name} ${cfg.backend}/${cfg.maxTokens}: ${t.message}")
+                Log.w(TAG, "init failed ${cfg.name} ${cfg.backend}/${cfg.maxTokens}", t)
             }
         }
 

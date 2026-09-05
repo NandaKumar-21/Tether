@@ -151,6 +151,36 @@ class StudioActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         previewWeb.settings.allowFileAccess = true
         previewWeb.webChromeClient = object : WebChromeClient() {
+            // A generated page that calls alert/prompt/confirm would sit behind a modal
+            // and block the preview, so swallow them and record them as a fault instead.
+            override fun onJsAlert(
+                view: WebView?, url: String?, message: String?, result: android.webkit.JsResult?
+            ): Boolean {
+                addLog("blocked alert(): $message")
+                consoleErrors.add("page called alert() - use a DOM element instead")
+                result?.cancel()
+                return true
+            }
+
+            override fun onJsConfirm(
+                view: WebView?, url: String?, message: String?, result: android.webkit.JsResult?
+            ): Boolean {
+                addLog("blocked confirm(): $message")
+                consoleErrors.add("page called confirm() - use a DOM element instead")
+                result?.cancel()
+                return true
+            }
+
+            override fun onJsPrompt(
+                view: WebView?, url: String?, message: String?, defaultValue: String?,
+                result: android.webkit.JsPromptResult?
+            ): Boolean {
+                addLog("blocked prompt(): $message")
+                consoleErrors.add("page called prompt() - use an input element instead")
+                result?.cancel()
+                return true
+            }
+
             override fun onConsoleMessage(cm: ConsoleMessage): Boolean {
                 val line = "${cm.messageLevel()} ${cm.message()} (line ${cm.lineNumber()})"
                 addLog(line)

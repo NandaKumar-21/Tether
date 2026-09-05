@@ -1,3 +1,4 @@
+
 package com.tether.app
 
 /**
@@ -15,7 +16,10 @@ object Studio {
             "- Start with <!DOCTYPE html> and end with </html>.\n" +
             "- Put all CSS in one <style> tag and all JavaScript in one <script> tag.\n" +
             "- No external files, no CDN links, no <img src> to the internet. The device is offline.\n" +
-            "- Dark background, large readable text, works on a phone screen.\n"
+            "- Never call alert(), prompt() or confirm(). They freeze the page.\n" +
+            "- All input and output must be visible DOM elements: buttons with onclick\n" +
+            "  handlers, and a div or input that shows the result.\n" +
+            "- Dark background, large readable text, big tap targets, works on a phone screen.\n"
 
     fun buildPrompt(request: String, cameraContext: String?): String {
         val sb = StringBuilder()
