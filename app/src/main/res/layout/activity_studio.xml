@@ -49,6 +49,25 @@
         android:textColor="#6B7680"
         android:textSize="26sp" />
 
+    <!-- versions strip: tap one to view it, tap a second to diff the two -->
+    <HorizontalScrollView
+        android:id="@+id/versionsScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/versionsRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp" />
+
+    </HorizontalScrollView>
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"

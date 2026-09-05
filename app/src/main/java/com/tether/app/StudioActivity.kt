@@ -9,15 +9,19 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.content.res.ColorStateList
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.widget.Button
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -48,6 +52,8 @@ class StudioActivity : AppCompatActivity() {
     private lateinit var previewWeb: WebView
     private lateinit var logText: TextView
     private lateinit var paneLog: ScrollView
+    private lateinit var versionsScroll: HorizontalScrollView
+    private lateinit var versionsRow: LinearLayout
 
     private lateinit var panes: List<View>
     private lateinit var tabs: List<Button>
@@ -68,6 +74,10 @@ class StudioActivity : AppCompatActivity() {
     private val versions = ArrayList<Version>()
     private var repairCount = 0
     private var maxRepairs = 2
+
+    /** Tap one chip to view it, tap a second to diff the two. Holds up to two. */
+    private val diffSelection = ArrayList<Version>()
+    private var showingDiff = false
 
     private var phaseStart = 0L
     private var timerRunning = false
@@ -93,6 +103,8 @@ class StudioActivity : AppCompatActivity() {
         previewWeb = findViewById(R.id.previewWeb)
         logText = findViewById(R.id.logText)
         paneLog = findViewById(R.id.paneLog)
+        versionsScroll = findViewById(R.id.versionsScroll)
+        versionsRow = findViewById(R.id.versionsRow)
 
         panes = listOf(
             findViewById(R.id.panePrompt),
@@ -106,7 +118,14 @@ class StudioActivity : AppCompatActivity() {
             findViewById(R.id.tabPreview),
             findViewById(R.id.tabLog)
         )
-        tabs.forEachIndexed { i, b -> b.setOnClickListener { showPane(i) } }
+        tabs.forEachIndexed { i, b ->
+            b.setOnClickListener {
+                // Tapping any tab away from an active diff restores the live log,
+                // since async WebView console callbacks would otherwise clobber it.
+                if (showingDiff) { showingDiff = false; restoreLog() }
+                showPane(i)
+            }
+        }
         showPane(0)
 
         findViewById<Button>(R.id.buildBtn).setOnClickListener { build() }
@@ -310,8 +329,80 @@ class StudioActivity : AppCompatActivity() {
         }, 1200)
     }
 
-    /** Gate 3 fills this in. */
-    private fun renderVersions() {}
+    // ------------------------------------------------------------ versions
+
+    private fun renderVersions() {
+        if (versions.isEmpty()) {
+            versionsScroll.visibility = View.GONE
+            return
+        }
+        versionsScroll.visibility = View.VISIBLE
+        versionsRow.removeAllViews()
+
+        for (v in versions) {
+            val chip = TextView(this).apply {
+                text = "v${v.index}"
+                textSize = 13f
+                setPadding(dp(14), dp(8), dp(14), dp(8))
+                gravity = Gravity.CENTER
+                val layout = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                layout.marginEnd = dp(8)
+                layoutParams = layout
+                background = ContextCompat.getDrawable(context, R.drawable.pill_bg)
+                val color = when {
+                    diffSelection.contains(v) -> 0xFF60A5FA.toInt()
+                    v.status == "CLEAN" -> ACCENT
+                    v.status == "BROKEN" -> RED
+                    else -> MUTED
+                }
+                backgroundTintList = ColorStateList.valueOf(color)
+                setTextColor(0xFF0B0D0F.toInt())
+                setOnClickListener { onVersionTapped(v) }
+            }
+            versionsRow.addView(chip)
+        }
+        versionsScroll.post { versionsScroll.fullScroll(View.FOCUS_RIGHT) }
+    }
+
+    private fun onVersionTapped(v: Version) {
+        showingDiff = false
+        viewVersion(v)
+
+        if (diffSelection.contains(v)) {
+            diffSelection.clear()
+            renderVersions()
+            return
+        }
+        diffSelection.add(v)
+        if (diffSelection.size == 2) {
+            showDiff(diffSelection[0], diffSelection[1])
+            diffSelection.clear()
+        }
+        renderVersions()
+    }
+
+    /** Loads a past version into CODE and PREVIEW without re-running the repair loop. */
+    private fun viewVersion(v: Version) {
+        codeEditor.setText(v.html)
+        updateLineNumbers()
+        renderHtml(v.html, v.index)
+        addLog("viewing v${v.index} (${v.status})")
+    }
+
+    private fun showDiff(a: Version, b: Version) {
+        showingDiff = true
+        val lo = if (a.index < b.index) a else b
+        val hi = if (a.index < b.index) b else a
+        logText.text = "diff v${lo.index} -> v${hi.index}\n\n" +
+            StudioDiff.render(lo.html, hi.html)
+        showPane(3)
+        paneLog.post { paneLog.fullScroll(ScrollView.FOCUS_UP) }
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     // --------------------------------------------------------------- state
 
@@ -332,8 +423,16 @@ class StudioActivity : AppCompatActivity() {
 
     private fun addLog(line: String) {
         logLines.add(line)
+        // A diff render owns logText until the user leaves it; renderHtml's WebView
+        // load is async, so console callbacks keep firing after showDiff() runs and
+        // would otherwise overwrite the diff mid-view.
+        if (showingDiff) return
         logText.text = logLines.joinToString("\n")
         paneLog.post { paneLog.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    private fun restoreLog() {
+        logText.text = logLines.joinToString("\n")
     }
 
     private fun updateLineNumbers() {
