@@ -75,19 +75,20 @@ class MainActivity : AppCompatActivity() {
     private fun render() {
         val s = ServerState
         statusText.text = buildString {
+            // Labels kept short so no line wraps at the larger demo font size.
             appendLine(if (s.running) "● LISTENING" else "○ STOPPED")
             appendLine()
-            appendLine("endpoint   :${s.PORT}/v1/chat/completions")
-            appendLine("lan        ${s.ipAddress}")
-            appendLine("model      ${s.modelName}")
-            appendLine("loaded     ${s.modelLoaded}")
-            appendLine("backend    ${s.backend}")
-            appendLine("requests   ${s.requestsServed.get()}")
-            appendLine("last       ${s.lastLatencyMs} ms")
-            appendLine("speed      ${"%.1f".format(s.lastTokensPerSec)} tok/s")
-            appendLine("device     ${Build.MANUFACTURER} ${Build.MODEL} / api ${Build.VERSION.SDK_INT}")
+            appendLine(":${s.PORT}/v1/chat/completions")
+            appendLine("lan     ${s.ipAddress}")
+            appendLine("model   ${s.modelName}")
+            appendLine("loaded  ${s.modelLoaded}")
+            appendLine("backend ${s.backend}")
+            appendLine("reqs    ${s.requestsServed.get()}")
+            appendLine("last    ${s.lastLatencyMs} ms")
+            appendLine("speed   ${"%.1f".format(s.lastTokensPerSec)} tok/s")
             val ocr = s.ocrContext
-            appendLine("ocr        " + if (ocr == null) "none" else "${ocr.length} chars queued")
+            appendLine("ocr     " + if (ocr == null) "none" else "${ocr.length} chars")
+            appendLine("${Build.MANUFACTURER} ${Build.MODEL} / api ${Build.VERSION.SDK_INT}")
         }
 
         startBtn.isEnabled = !s.running
