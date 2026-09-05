@@ -61,6 +61,20 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SpeechActivity::class.java))
         }
 
+        // Dashboard row. STUDIO is the button above; not duplicated here.
+        findViewById<Button>(R.id.chatDashBtn).setOnClickListener {
+            startActivity(Intent(this, ChatActivity::class.java))
+        }
+        findViewById<Button>(R.id.codeDashBtn).setOnClickListener {
+            startActivity(Intent(this, WorkspaceActivity::class.java))
+        }
+        findViewById<Button>(R.id.imageDashBtn).setOnClickListener {
+            startActivity(Intent(this, ImageActivity::class.java))
+        }
+        findViewById<Button>(R.id.filesDashBtn).setOnClickListener {
+            startActivity(Intent(this, FileBrowserActivity::class.java))
+        }
+
         requestNotificationPermission()
 
         if (!ServerState.running) {
