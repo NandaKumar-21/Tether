@@ -19,6 +19,11 @@ captures/
 *.ap_
 *.dex
 
+# python
+.aider-venv/
+.aider*
+__pycache__/
+
 # ide
 .idea/
 *.iml
