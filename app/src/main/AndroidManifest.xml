@@ -54,6 +54,28 @@
             android:screenOrientation="portrait" />
 
         <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".FileBrowserActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".ImageActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".WorkspaceActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".StudioActivity"
             android:exported="false"
             android:screenOrientation="portrait"
