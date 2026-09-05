@@ -53,6 +53,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         scanBtn.setOnClickListener { startActivity(Intent(this, OcrActivity::class.java)) }
+        findViewById<Button>(R.id.micBtn).setOnClickListener {
+            startActivity(Intent(this, SpeechActivity::class.java))
+        }
 
         // The runtime should just be on. Removes a step from the demo.
         if (!ServerState.running) {

@@ -18,6 +18,13 @@
         android:name="android.hardware.camera"
         android:required="false" />
 
+    <!-- Without this, SpeechRecognizer cannot see the recognition service on API 30+. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:label="Tether"
@@ -38,6 +45,11 @@
 
         <activity
             android:name=".OcrActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <activity
+            android:name=".SpeechActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
 
