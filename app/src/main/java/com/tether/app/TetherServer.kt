@@ -79,7 +79,11 @@ class TetherServer(
         val root = JSONObject(if (body.isBlank()) "{}" else body)
         val messages = root.optJSONArray("messages") ?: JSONArray()
 
-        val prompt = flattenMessages(messages)
+        // A camera capture becomes context for exactly the next request.
+        val ocr = ServerState.consumeOcrContext()
+        if (ocr != null) ServerState.log("using OCR context (${ocr.length} chars)")
+
+        val prompt = flattenMessages(messages, ocr)
         if (prompt.isBlank()) {
             return json(
                 Response.Status.BAD_REQUEST,
@@ -151,9 +155,16 @@ class TetherServer(
      * Gemma 3 turn format. Gemma has no system role, so system content is
      * folded into the first user turn.
      */
-    private fun flattenMessages(messages: JSONArray): String {
+    private fun flattenMessages(messages: JSONArray, ocrContext: String? = null): String {
         val system = StringBuilder()
         val turns = ArrayList<Pair<String, String>>()
+
+        if (!ocrContext.isNullOrBlank()) {
+            system.append("Use the following text, captured from the user's camera, ")
+                .append("as context for the question.\n\n")
+                .append(ocrContext)
+                .append("\n\n")
+        }
 
         for (i in 0 until messages.length()) {
             val m = messages.optJSONObject(i) ?: continue

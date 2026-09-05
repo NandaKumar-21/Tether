@@ -21,6 +21,15 @@ object ServerState {
     @Volatile var lastLatencyMs: Long = 0L
     @Volatile var ipAddress: String = "-"
 
+    /** Text from the last camera OCR capture. Consumed by the next chat request. */
+    @Volatile var ocrContext: String? = null
+
+    fun consumeOcrContext(): String? {
+        val c = ocrContext
+        ocrContext = null
+        return c
+    }
+
     val requestsServed = AtomicInteger(0)
 
     private val logLines = ArrayDeque<String>()

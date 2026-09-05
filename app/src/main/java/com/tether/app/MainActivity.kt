@@ -18,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var logText: TextView
     private lateinit var startBtn: Button
     private lateinit var stopBtn: Button
+    private lateinit var scanBtn: Button
 
     private val ui = Handler(Looper.getMainLooper())
     private val refresh = object : Runnable {
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         logText = findViewById(R.id.logText)
         startBtn = findViewById(R.id.startBtn)
         stopBtn = findViewById(R.id.stopBtn)
+        scanBtn = findViewById(R.id.scanBtn)
 
         requestNotificationPermission()
 
@@ -49,6 +51,8 @@ class MainActivity : AppCompatActivity() {
             )
             ui.postDelayed({ render() }, 400)
         }
+
+        scanBtn.setOnClickListener { startActivity(Intent(this, OcrActivity::class.java)) }
 
         // The runtime should just be on. Removes a step from the demo.
         if (!ServerState.running) {
@@ -82,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             appendLine("last       ${s.lastLatencyMs} ms")
             appendLine("speed      ${"%.1f".format(s.lastTokensPerSec)} tok/s")
             appendLine("device     ${Build.MANUFACTURER} ${Build.MODEL} / api ${Build.VERSION.SDK_INT}")
+            val ocr = s.ocrContext
+            appendLine("ocr        " + if (ocr == null) "none" else "${ocr.length} chars queued")
         }
 
         startBtn.isEnabled = !s.running

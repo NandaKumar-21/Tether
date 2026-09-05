@@ -36,6 +36,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".OcrActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <service
             android:name=".TetherService"
             android:exported="false"
