@@ -1,0 +1,134 @@
+===============================================
+TETHER STUDIO - what it is, what works, how to demo it
+===============================================
+
+THE PITCH
+---------
+Tether already proves a phone can run an LLM offline. Studio proves the
+phone can be a complete offline dev loop: prompt -> code -> run -> error
+-> self-repair -> run, with no laptop anywhere. This is the answer to
+"integrate with an IDE, what if I don't have a laptop" - the phone IS
+the IDE.
+
+Runtime: Gemma 3 1B int4, MediaPipe, Adreno GPU, ctx 2048, ~40-50 tok/s.
+gemma-4-E4B-it.litertlm does not run on this device - see "WHAT DOES
+NOT WORK" below. Do not promise a bigger model on stage.
+
+
+WHAT WORKS
+----------
+- STUDIO button on the main status screen opens Tether Studio.
+- PROMPT tab: type or use MIC (offline SpeechRecognizer) or CAMERA
+  (ML Kit OCR) to add context, then BUILD.
+- Generation calls the model IN-PROCESS. Port 8080 is untouched -
+  external clients (client_demo.py, curl, aider) keep working exactly
+  as before, at the same time if you want to show both.
+- The model writes ONE self-contained HTML file: inline CSS and JS, no
+  CDNs. Fences and commentary are stripped defensively even when the
+  model ignores the instruction not to add them.
+- CODE tab: the generated file, editable, with line numbers.
+- PREVIEW tab: a real WebView actually running the page on the phone.
+- LOG tab: console output with line numbers.
+- THE REPAIR LOOP: after rendering, Studio watches the console for 2
+  seconds. If the page threw errors, it sends the code and the errors
+  back to the model asking for a corrected file, then re-renders.
+  Capped at 2 repairs. If errors remain after that it says so plainly
+  ("N ERRORS REMAIN") rather than pretending success. It cannot loop
+  forever.
+- THE STATE MACHINE is the demo: GENERATING -> RUNNING -> FOUND N
+  ERRORS -> REPAIRING (n/2) -> CLEAN or N ERRORS REMAIN, each phase
+  with a running timer, large text, readable from a metre away.
+- VERSIONS STRIP: every generated file is kept. A row of chips (v1, v2,
+  v3...) appears once a build starts, colour-coded CLEAN or BROKEN. Tap
+  a chip to view that version in CODE and PREVIEW. Tap a second chip to
+  see a coloured line diff between the two in the LOG tab.
+- alert()/confirm()/prompt() in generated pages are blocked and logged
+  as a fault rather than freezing the WebView behind a native dialog.
+
+
+WHAT DOES NOT WORK - SAY SO ON STAGE, DO NOT HIDE IT
+-----------------------------------------------------
+- gemma-4-E4B-it.litertlm (the 4B model) does not run.
+    - MediaPipe tasks-genai 0.10.24 rejects the LiteRT-LM container
+      outright at parse time.
+    - 0.10.35 DOES start loading it (LitertLmLoader::Initialize runs)
+      but the 3.4GB load kills the process in a restart loop, even with
+      largeHeap="true" already set and context dropped to 1024.
+      largeHeap raises the Java heap; the allocation that blows here is
+      native. This needs a smaller quantisation or the standalone
+      LiteRT-LM runtime, not a MediaPipe version bump. Roadmap item.
+- The 1B model sometimes produces genuinely broken code the repair loop
+  can't fix in 2 tries (undefined functions, syntax errors). This is a
+  MODEL capability limit, not a Studio bug. If it happens live: that IS
+  the demo. Detection and honest failure reporting is the point, not
+  guaranteed repair. Say exactly that.
+- Complex or multi-step prompts ("a todo app with local storage and
+  drag-and-drop") are more likely to need repairs or fail outright.
+  Favour simple, visual, single-purpose asks for a live demo (see
+  below).
+- Out of scope entirely, do not attempt on stage: Python/Node/terminal
+  execution, React/FastAPI builds, git or GitHub, cloud routing,
+  NPU/QNN, multi-file projects, anything persisting across app restarts.
+  If asked, say "roadmap."
+
+
+THE 3-MINUTE DEMO - EXACT TAP SEQUENCE
+---------------------------------------
+Phone plugged in, airplane mode ON, radios OFF (same as the main demo -
+run scripts\demo.ps1 once beforehand to prove it and warm the model).
+
+1. Open Tether app -> tap STUDIO.
+2. PROMPT tab is already showing. Type or speak:
+     "a counter with plus and minus buttons and a reset button"
+   (Verified simple, visual, low risk of needing repair.)
+3. Tap BUILD.
+4. WATCH THE STATE LINE. Narrate it as it changes:
+     GENERATING -> RUNNING -> (CLEAN, or FOUND N ERRORS -> REPAIRING)
+   This state machine IS the pitch. Do not rush past it.
+5. If it goes straight to CLEAN: tap PREVIEW, tap the buttons, show it
+   actually runs. Say "generated and running, no laptop, no network."
+6. If it repairs: let it finish (max ~30-40s for 2 repairs), then tap
+   the version chips (v1, v2...) to show the history. Tap two chips to
+   show the diff - "here is exactly what the model changed to fix
+   itself."
+7. Tap LOG to show the console output backing the state machine - this
+   is not a magic trick, it's real browser console errors.
+8. Close with: "Port 8080 never moved. The laptop endpoint from the
+   first demo is still live right now" - and if you have a second
+   terminal, run client_demo.py to prove both work simultaneously.
+
+FALLBACK PROMPTS if the first one behaves oddly (all pre-verified
+simple enough for a 1B model):
+   "a counter that increments on button click"
+   "a simple calculator with buttons and a display"
+   "a color picker that changes the background"
+
+AVOID ON STAGE: anything mentioning storage, multiple screens, API
+calls, or "todo list with X and Y and Z" - compound requirements are
+where the 1B model's code quality drops and repairs are more likely to
+exhaust the cap.
+
+
+RECOVERY
+--------
+Studio wedged, empty reply, or a generated page hangs the WebView:
+  - Press back to MainActivity, force-stop and relaunch:
+
+    adb shell am force-stop com.tether.app
+    adb shell am start -n com.tether.app/.MainActivity
+
+  - Then reopen STUDIO. Model reload takes ~20-25s (health check on the
+    main screen shows READY when done).
+
+If that does not clear it, the main fix.ps1 recovery still applies to
+the whole app (clears the MediaPipe GPU cache, the one known cause of
+empty replies for both :8080 and Studio, since they share LlmEngine):
+
+    powershell -ExecutionPolicy Bypass -File scripts\fix.ps1
+
+
+MERGE STATUS
+------------
+Merged to main only after scripts\demo.ps1, scripts\client_demo.py, and
+scripts\client_demo_safe.py all passed unchanged against main with
+Studio's code present. See the final report for the actual result.
