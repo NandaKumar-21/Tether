@@ -1,0 +1,29 @@
+# secrets
+.hftoken
+*.token
+local.properties
+
+# models - never commit, pushed to device with adb
+*.task
+*.litertlm
+*.tflite
+*.bin
+
+# gradle / android build output
+.gradle/
+build/
+app/build/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ide
+.idea/
+*.iml
+.vscode/
+
+# os
+Thumbs.db
+.DS_Store
