@@ -108,6 +108,7 @@ class TetherServer(
 
         val n = ServerState.requestsServed.incrementAndGet()
         ServerState.lastLatencyMs = elapsed
+        ServerState.recordAnswer(reply) // display only, does not affect the response body
         ServerState.log(
             "#$n chat  ${elapsed}ms  ${"%.1f".format(ServerState.lastTokensPerSec)} tok/s  ${reply.length}ch"
         )

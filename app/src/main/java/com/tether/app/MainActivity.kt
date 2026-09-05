@@ -8,23 +8,36 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.widget.Button
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var statusText: TextView
-    private lateinit var logText: TextView
-    private lateinit var startBtn: Button
-    private lateinit var stopBtn: Button
-    private lateinit var scanBtn: Button
+    private companion object {
+        const val ACCENT = 0xFF4ADE80.toInt()
+        const val MUTED = 0xFF7A8590.toInt()
+        const val AMBER = 0xFFF5C451.toInt()
+        /** How long after a reply the pill keeps reading SERVING. */
+        const val SERVING_WINDOW_MS = 2500L
+    }
+
+    private lateinit var statusPill: TextView
+    private lateinit var backendValue: TextView
+    private lateinit var tpsValue: TextView
+    private lateinit var requestsValue: TextView
+    private lateinit var modelValue: TextView
+    private lateinit var answerText: TextView
+    private lateinit var answerScroll: ScrollView
 
     private val ui = Handler(Looper.getMainLooper())
+    private var shownAnswerAt = -1L
+
     private val refresh = object : Runnable {
         override fun run() {
             render()
-            ui.postDelayed(this, 1000)
+            ui.postDelayed(this, 500)
         }
     }
 
@@ -32,32 +45,23 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        statusText = findViewById(R.id.statusText)
-        logText = findViewById(R.id.logText)
-        startBtn = findViewById(R.id.startBtn)
-        stopBtn = findViewById(R.id.stopBtn)
-        scanBtn = findViewById(R.id.scanBtn)
+        statusPill = findViewById(R.id.statusPill)
+        backendValue = findViewById(R.id.backendValue)
+        tpsValue = findViewById(R.id.tpsValue)
+        requestsValue = findViewById(R.id.requestsValue)
+        modelValue = findViewById(R.id.modelValue)
+        answerText = findViewById(R.id.answerText)
+        answerScroll = findViewById(R.id.answerScroll)
 
-        requestNotificationPermission()
-
-        startBtn.setOnClickListener {
-            ContextCompat.startForegroundService(this, Intent(this, TetherService::class.java))
-            ui.postDelayed({ render() }, 400)
+        findViewById<Button>(R.id.scanBtn).setOnClickListener {
+            startActivity(Intent(this, OcrActivity::class.java))
         }
-
-        stopBtn.setOnClickListener {
-            startService(
-                Intent(this, TetherService::class.java).setAction(TetherService.ACTION_STOP)
-            )
-            ui.postDelayed({ render() }, 400)
-        }
-
-        scanBtn.setOnClickListener { startActivity(Intent(this, OcrActivity::class.java)) }
         findViewById<Button>(R.id.micBtn).setOnClickListener {
             startActivity(Intent(this, SpeechActivity::class.java))
         }
 
-        // The runtime should just be on. Removes a step from the demo.
+        requestNotificationPermission()
+
         if (!ServerState.running) {
             ContextCompat.startForegroundService(this, Intent(this, TetherService::class.java))
         }
@@ -77,28 +81,47 @@ class MainActivity : AppCompatActivity() {
 
     private fun render() {
         val s = ServerState
-        statusText.text = buildString {
-            // Labels kept short so no line wraps at the larger demo font size.
-            appendLine(if (s.running) "● LISTENING" else "○ STOPPED")
-            appendLine()
-            appendLine(":${s.PORT}/v1/chat/completions")
-            appendLine("lan     ${s.ipAddress}")
-            appendLine("model   ${s.modelName}")
-            appendLine("loaded  ${s.modelLoaded}")
-            appendLine("backend ${s.backend}")
-            appendLine("reqs    ${s.requestsServed.get()}")
-            appendLine("last    ${s.lastLatencyMs} ms")
-            appendLine("speed   ${"%.1f".format(s.lastTokensPerSec)} tok/s")
-            val ocr = s.ocrContext
-            appendLine("ocr     " + if (ocr == null) "none" else "${ocr.length} chars")
-            appendLine("${Build.MANUFACTURER} ${Build.MODEL} / api ${Build.VERSION.SDK_INT}")
+
+        val serving = s.lastAnswerAtMs > 0 &&
+            System.currentTimeMillis() - s.lastAnswerAtMs < SERVING_WINDOW_MS
+
+        when {
+            !s.modelLoaded -> setPill("LOADING", AMBER)
+            serving -> setPill("SERVING", ACCENT)
+            else -> setPill("READY", ACCENT)
         }
 
-        startBtn.isEnabled = !s.running
-        stopBtn.isEnabled = s.running
+        // "GPU / ctx 2048" -> "GPU". The context size is not what a judge reads from a metre.
+        backendValue.text = s.backend.substringBefore('/').trim().ifEmpty { "—" }
+        tpsValue.text = "%.1f".format(s.lastTokensPerSec)
+        requestsValue.text = s.requestsServed.get().toString()
+        modelValue.text = s.modelName
 
-        val lines = s.logSnapshot()
-        logText.text = if (lines.isEmpty()) "no requests yet" else lines.takeLast(60).joinToString("\n")
+        // Only re-render the answer when a new one arrives, so spans are not rebuilt
+        // 2x a second and the scroll position is left alone while reading.
+        if (s.lastAnswerAtMs != shownAnswerAt) {
+            shownAnswerAt = s.lastAnswerAtMs
+            val body = s.lastAnswer
+            if (body.isBlank()) {
+                answerText.text = "the model returned an empty reply"
+            } else {
+                answerText.text = MarkdownLite.render(body)
+                answerScroll.post { answerScroll.fullScroll(ScrollView.FOCUS_DOWN) }
+            }
+        }
+
+        if (s.lastAnswerAtMs == 0L) {
+            answerText.text = if (s.modelLoaded) {
+                "ready on ${Build.MANUFACTURER} ${Build.MODEL} — waiting for the first request"
+            } else {
+                "loading ${s.modelName} onto the GPU"
+            }
+        }
+    }
+
+    private fun setPill(label: String, color: Int) {
+        if (statusPill.text != label) statusPill.text = label
+        statusPill.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
     }
 
     private fun requestNotificationPermission() {

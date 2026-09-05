@@ -24,6 +24,15 @@ object ServerState {
     /** Text from the last camera OCR capture. Consumed by the next chat request. */
     @Volatile var ocrContext: String? = null
 
+    /** Display only. The status screen shows this; it never affects the HTTP response. */
+    @Volatile var lastAnswer: String = ""
+    @Volatile var lastAnswerAtMs: Long = 0L
+
+    fun recordAnswer(text: String) {
+        lastAnswer = text
+        lastAnswerAtMs = System.currentTimeMillis()
+    }
+
     fun consumeOcrContext(): String? {
         val c = ocrContext
         ocrContext = null
