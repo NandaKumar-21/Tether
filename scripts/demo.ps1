@@ -76,7 +76,11 @@ if ($dns -match "unknown host|unreachable") { Good "DNS dead: huggingface.co doe
 if (-not $SkipClear) {
     Step 3 "Cold start (wiping app state so nothing is cached)"
     & $adb shell pm clear $pkg | Out-Null
+    # pm clear also wipes runtime grants. Re-grant all three or SCAN and MIC
+    # will throw a permission dialog on stage.
     & $adb shell pm grant $pkg android.permission.POST_NOTIFICATIONS | Out-Null
+    & $adb shell pm grant $pkg android.permission.CAMERA | Out-Null
+    & $adb shell pm grant $pkg android.permission.RECORD_AUDIO | Out-Null
 } else {
     Step 3 "Reusing the running process (-SkipClear)"
 }
