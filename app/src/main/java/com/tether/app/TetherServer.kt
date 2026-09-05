@@ -3,6 +3,7 @@ package com.tether.app
 import fi.iki.elonen.NanoHTTPD
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayInputStream
 
 /**
  * OpenAI-compatible HTTP surface.
@@ -111,6 +112,12 @@ class TetherServer(
             "#$n chat  ${elapsed}ms  ${"%.1f".format(ServerState.lastTokensPerSec)} tok/s  ${reply.length}ch"
         )
 
+        // stream=true was previously parsed off the wire and ignored, so clients got
+        // a whole chat.completion where they expected SSE chunks and read nothing.
+        if (root.optBoolean("stream", false)) {
+            return streamResponse(reply)
+        }
+
         val promptTokens = approxTokens(prompt)
         val completionTokens = approxTokens(reply)
 
@@ -142,6 +149,59 @@ class TetherServer(
             )
 
         return json(Response.Status.OK, payload)
+    }
+
+    /**
+     * OpenAI server-sent-events format. The text is already generated, so these are
+     * replayed chunks rather than live tokens - the wire format is what clients need.
+     */
+    private fun streamResponse(reply: String): Response {
+        val id = "chatcmpl-tether-${System.nanoTime()}"
+        val created = System.currentTimeMillis() / 1000
+        val sb = StringBuilder()
+
+        fun frame(delta: JSONObject, finish: Any?) {
+            val chunk = JSONObject()
+                .put("id", id)
+                .put("object", "chat.completion.chunk")
+                .put("created", created)
+                .put("model", ServerState.modelName)
+                .put(
+                    "choices",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("index", 0)
+                            .put("delta", delta)
+                            .put("finish_reason", finish ?: JSONObject.NULL)
+                    )
+                )
+            sb.append("data: ").append(chunk.toString()).append("\n\n")
+        }
+
+        frame(JSONObject().put("role", "assistant"), null)
+
+        // Keep whitespace: splitting on it and rejoining would lose newlines in code.
+        var i = 0
+        val size = 12
+        while (i < reply.length) {
+            val end = minOf(i + size, reply.length)
+            frame(JSONObject().put("content", reply.substring(i, end)), null)
+            i = end
+        }
+
+        frame(JSONObject(), "stop")
+        sb.append("data: [DONE]\n\n")
+
+        val bytes = sb.toString().toByteArray(Charsets.UTF_8)
+        return newChunkedResponse(
+            Response.Status.OK,
+            "text/event-stream",
+            ByteArrayInputStream(bytes)
+        ).apply {
+            addHeader("Cache-Control", "no-cache")
+            addHeader("Connection", "keep-alive")
+            addHeader("X-Accel-Buffering", "no")
+        }
     }
 
     /** NanoHTTPD needs parseBody() called before the raw JSON is reachable. */
