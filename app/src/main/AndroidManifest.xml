@@ -53,6 +53,12 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".StudioActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
         <service
             android:name=".TetherService"
             android:exported="false"

@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0B0D0F"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <!-- header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="22dp"
+        android:paddingEnd="22dp"
+        android:paddingTop="12dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:letterSpacing="0.24"
+            android:text="TETHER STUDIO"
+            android:textColor="#8A939C"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/studioTimer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFeatureSettings="tnum"
+            android:text=""
+            android:textColor="#6B7680"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+
+    <!-- the state machine, this is the thing judges read -->
+    <TextView
+        android:id="@+id/studioState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="22dp"
+        android:paddingEnd="22dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="16dp"
+        android:text="IDLE"
+        android:textColor="#6B7680"
+        android:textSize="26sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- PROMPT -->
+        <LinearLayout
+            android:id="@+id/panePrompt"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp">
+
+            <EditText
+                android:id="@+id/promptInput"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@null"
+                android:gravity="top"
+                android:hint="describe what to build"
+                android:inputType="textMultiLine|textCapSentences"
+                android:lineSpacingMultiplier="1.3"
+                android:textColor="#F2F5F7"
+                android:textColorHint="#4A535C"
+                android:textSize="19sp" />
+
+            <TextView
+                android:id="@+id/promptExtras"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="10dp"
+                android:text=""
+                android:textColor="#6B7680"
+                android:textSize="14sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingBottom="14dp">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/studioMicBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_bg"
+                    android:letterSpacing="0.14"
+                    android:stateListAnimator="@null"
+                    android:text="MIC"
+                    android:textColor="#C7D0D9"
+                    android:textSize="14sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/studioCamBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/btn_bg"
+                    android:letterSpacing="0.14"
+                    android:stateListAnimator="@null"
+                    android:text="CAMERA"
+                    android:textColor="#C7D0D9"
+                    android:textSize="14sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/buildBtn"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1.4"
+                    android:background="@drawable/btn_primary"
+                    android:letterSpacing="0.14"
+                    android:stateListAnimator="@null"
+                    android:text="BUILD"
+                    android:textColor="#08110B"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- CODE -->
+        <ScrollView
+            android:id="@+id/paneCode"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/codeLines"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:gravity="end"
+                        android:paddingEnd="12dp"
+                        android:textColor="#3F474F"
+                        android:textSize="14sp" />
+
+                    <EditText
+                        android:id="@+id/codeEditor"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@null"
+                        android:fontFamily="monospace"
+                        android:gravity="top"
+                        android:inputType="textMultiLine|textNoSuggestions"
+                        android:textColor="#C7D0D9"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
+
+        </ScrollView>
+
+        <!-- PREVIEW -->
+        <WebView
+            android:id="@+id/previewWeb"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+        <!-- LOG -->
+        <ScrollView
+            android:id="@+id/paneLog"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/logText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:lineSpacingMultiplier="1.35"
+                android:paddingBottom="16dp"
+                android:text="no output yet"
+                android:textColor="#6B7680"
+                android:textSize="14sp" />
+
+        </ScrollView>
+
+    </FrameLayout>
+
+    <!-- tabs -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="14dp">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/tabPrompt"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:letterSpacing="0.1"
+            android:stateListAnimator="@null"
+            android:text="PROMPT"
+            android:textColor="#6B7680"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/tabCode"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:letterSpacing="0.1"
+            android:stateListAnimator="@null"
+            android:text="CODE"
+            android:textColor="#6B7680"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/tabPreview"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:letterSpacing="0.1"
+            android:stateListAnimator="@null"
+            android:text="PREVIEW"
+            android:textColor="#6B7680"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/tabLog"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:background="@null"
+            android:letterSpacing="0.1"
+            android:stateListAnimator="@null"
+            android:text="LOG"
+            android:textColor="#6B7680"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+</LinearLayout>

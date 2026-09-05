@@ -51,6 +51,9 @@ class MainActivity : AppCompatActivity() {
         answerText = findViewById(R.id.answerText)
         answerScroll = findViewById(R.id.answerScroll)
 
+        findViewById<Button>(R.id.studioBtn).setOnClickListener {
+            startActivity(Intent(this, StudioActivity::class.java))
+        }
         findViewById<Button>(R.id.scanBtn).setOnClickListener {
             startActivity(Intent(this, OcrActivity::class.java))
         }
