@@ -51,7 +51,9 @@ print(client.chat.completions.create(
 ```
 
 That exact script is [scripts/client_demo.py](scripts/client_demo.py) — verified against the
-phone in airplane mode with the stock `openai` package and no phone-side changes.
+phone in airplane mode with the stock `openai` package and no phone-side changes. It passes
+`stream=True`; the endpoint emits real SSE chunks, so tokens arrive as they are produced.
+[scripts/client_demo_safe.py](scripts/client_demo_safe.py) is the same call without streaming.
 
 Or plain curl (PowerShell needs `--%`, otherwise it eats the quotes):
 

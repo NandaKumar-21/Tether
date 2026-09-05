@@ -43,11 +43,21 @@ Shows:
   answer: A race condition occurs when...
   usage: 17 prompt + 35 completion tokens
 
+The answer streams in token by token.
+
 SAY: "This is the stock openai package. Not one
 line of it knows it is talking to a phone. The
 phone is offline."
 
 Takes about 2 seconds.
+
+IF THE STREAMING LOOKS WRONG, use the fallback:
+
+   python scripts\client_demo_safe.py
+
+Same thing, no streaming, prints the answer in
+one go plus the token counts. Verified
+byte-identical all afternoon.
 
 
 ===============================================
