@@ -59,6 +59,16 @@ class StudioActivity : AppCompatActivity() {
     private var cameraContext: String? = null
     private var recognizer: SpeechRecognizer? = null
 
+    /** One entry per generated file, including the repairs. */
+    class Version(val index: Int, val html: String) {
+        var errors: List<String> = emptyList()
+        var status: String = "?"
+    }
+
+    private val versions = ArrayList<Version>()
+    private var repairCount = 0
+    private var maxRepairs = 2
+
     private var phaseStart = 0L
     private var timerRunning = false
     private val timerTick = object : Runnable {
@@ -175,13 +185,26 @@ class StudioActivity : AppCompatActivity() {
         }
 
         logLines.clear()
+        versions.clear()
+        repairCount = 0
         addLog("prompt: $request")
         setState("GENERATING", AMBER)
         startTimer()
         showPane(1)
 
-        val prompt = Studio.buildPrompt(request, cameraContext)
+        generateAsync(Studio.buildPrompt(request, cameraContext)) { html ->
+            if (html.isBlank()) {
+                stopTimer()
+                setState("MODEL RETURNED NOTHING", RED)
+                addLog("empty generation")
+            } else {
+                addLog("v1 generated, ${html.length} chars")
+                runVersion(html)
+            }
+        }
+    }
 
+    private fun generateAsync(prompt: String, onDone: (String) -> Unit) {
         Thread({
             val raw = try {
                 LlmEngine.generate(prompt)
@@ -190,34 +213,75 @@ class StudioActivity : AppCompatActivity() {
                 ""
             }
             val html = Studio.cleanHtml(raw)
-            ui.post {
-                if (html.isBlank()) {
-                    stopTimer()
-                    setState("MODEL RETURNED NOTHING", RED)
-                    addLog("empty generation")
-                    return@post
-                }
-                codeEditor.setText(html)
-                updateLineNumbers()
-                addLog("generated ${html.length} chars")
-                setState("RUNNING", AMBER)
-                showPane(2)
-                renderHtml(html, 1)
-                ui.postDelayed({ afterRun() }, 2000)
-            }
+            ui.post { onDone(html) }
         }, "studio-generate").start()
     }
 
-    /** Gate 1 stops here: report what the page did. The repair loop arrives in Gate 2. */
-    private fun afterRun() {
-        stopTimer()
-        val n = consoleErrors.size
-        if (n == 0) {
-            setState("CLEAN", ACCENT)
-        } else {
-            setState("FOUND $n ERROR${if (n == 1) "" else "S"}", RED)
-        }
+    /** Write a new version, show it, then judge it after the page has had time to fail. */
+    private fun runVersion(html: String) {
+        val v = Version(versions.size + 1, html)
+        versions.add(v)
+
+        codeEditor.setText(html)
+        updateLineNumbers()
+        renderVersions()
+
+        setState("RUNNING", AMBER)
+        startTimer()
+        showPane(2)
+        renderHtml(html, v.index)
+        ui.postDelayed({ evaluate(v) }, 2000)
     }
+
+    /**
+     * The repair loop. Capped at [maxRepairs] so it can never spin: after that it
+     * stops and shows whatever is left rather than pretending it succeeded.
+     */
+    private fun evaluate(v: Version) {
+        stopTimer()
+        val errors = consoleErrors.toList()
+        v.errors = errors
+        v.status = if (errors.isEmpty()) "CLEAN" else "BROKEN"
+        renderVersions()
+
+        if (errors.isEmpty()) {
+            setState("CLEAN", ACCENT)
+            addLog("v${v.index} clean")
+            return
+        }
+
+        val n = errors.size
+        setState("FOUND $n ERROR${if (n == 1) "" else "S"}", RED)
+        errors.forEach { addLog("  ! $it") }
+
+        if (repairCount >= maxRepairs) {
+            ui.postDelayed({
+                setState("$n ERROR${if (n == 1) "" else "S"} REMAIN", RED)
+                addLog("repair cap reached, stopping")
+            }, 1200)
+            return
+        }
+
+        // Hold the error count on screen long enough to read before repairing.
+        ui.postDelayed({
+            repairCount++
+            setState("REPAIRING ($repairCount/$maxRepairs)", AMBER)
+            startTimer()
+            addLog("repair $repairCount: sending code + errors back to the model")
+            generateAsync(Studio.buildRepairPrompt(v.html, errors)) { fixed ->
+                if (fixed.isBlank()) {
+                    stopTimer()
+                    setState("REPAIR RETURNED NOTHING", RED)
+                } else {
+                    addLog("v${versions.size + 1} generated, ${fixed.length} chars")
+                    runVersion(fixed)
+                }
+            }
+        }, 1200)
+    }
+
+    /** Gate 3 fills this in. */
+    private fun renderVersions() {}
 
     // --------------------------------------------------------------- state
 
