@@ -4,18 +4,18 @@
     <style name="MetricLabel">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:textColor">#6B7680</item>
-        <item name="android:letterSpacing">0.16</item>
-        <item name="android:paddingBottom">2dp</item>
+        <item name="android:letterSpacing">0.18</item>
+        <item name="android:paddingBottom">8dp</item>
     </style>
 
     <!-- tnum keeps digit widths equal so live numbers do not jitter as they update -->
     <style name="MetricValue">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:textSize">30sp</item>
-        <item name="android:textColor">#E6EAEE</item>
+        <item name="android:textSize">34sp</item>
+        <item name="android:textColor">#F2F5F7</item>
         <item name="android:fontFeatureSettings">tnum</item>
         <item name="android:includeFontPadding">false</item>
     </style>

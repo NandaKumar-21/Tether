@@ -3,8 +3,10 @@ package com.tether.app
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -30,11 +32,16 @@ class OcrActivity : AppCompatActivity() {
     private companion object {
         const val TAG = "TetherOCR"
         const val REQ_CAMERA = 200
+        const val ACCENT = 0xFF4ADE80.toInt()
+        const val AMBER = 0xFFF5C451.toInt()
+        const val MUTED = 0xFF7A8590.toInt()
+        const val RED = 0xFFF87171.toInt()
     }
 
     private lateinit var previewView: PreviewView
     private lateinit var captureBtn: Button
     private lateinit var resultText: TextView
+    private lateinit var resultScroll: View
     private lateinit var hint: TextView
 
     private var imageCapture: ImageCapture? = null
@@ -49,6 +56,7 @@ class OcrActivity : AppCompatActivity() {
         previewView = findViewById(R.id.preview)
         captureBtn = findViewById(R.id.captureBtn)
         resultText = findViewById(R.id.ocrResult)
+        resultScroll = findViewById(R.id.resultScroll)
         hint = findViewById(R.id.hint)
 
         captureBtn.setOnClickListener { capture() }
@@ -107,7 +115,8 @@ class OcrActivity : AppCompatActivity() {
     private fun capture() {
         val capture = imageCapture ?: return
         captureBtn.isEnabled = false
-        hint.text = "Reading..."
+        captureBtn.text = "READING"
+        setPill("READING", AMBER)
 
         capture.takePicture(
             ContextCompat.getMainExecutor(this),
@@ -144,15 +153,16 @@ class OcrActivity : AppCompatActivity() {
 
     private fun onText(text: String) {
         captureBtn.isEnabled = true
+        captureBtn.text = "CAPTURE"
         val clean = text.trim()
         if (clean.isEmpty()) {
-            hint.text = "No text found. Try again."
+            setPill("NO TEXT FOUND", MUTED)
             return
         }
         ServerState.ocrContext = clean
         ServerState.log("OCR captured ${clean.length} chars")
-        hint.text = "Captured. It will be context for the next request."
-        resultText.visibility = TextView.VISIBLE
+        setPill("${clean.length} CHARS CAPTURED", ACCENT)
+        resultScroll.visibility = View.VISIBLE
         resultText.text = clean.take(1200)
         captureBtn.text = "CAPTURE AGAIN"
         Log.i(TAG, "ocr: ${clean.take(200)}")
@@ -160,8 +170,14 @@ class OcrActivity : AppCompatActivity() {
 
     private fun fail(msg: String) {
         captureBtn.isEnabled = true
-        hint.text = "Failed: $msg"
+        captureBtn.text = "CAPTURE"
+        setPill("FAILED", RED)
         Log.w(TAG, "ocr failed: $msg")
+    }
+
+    private fun setPill(label: String, color: Int) {
+        hint.text = label
+        hint.backgroundTintList = ColorStateList.valueOf(color)
     }
 
     override fun onDestroy() {

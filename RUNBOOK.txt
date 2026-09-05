@@ -204,7 +204,10 @@ Speed      ~40 tokens/sec
 Latency    ~1.0s for a 2-sentence answer
 Cold load  22-25s
 Warm load  0s
-Device     vivo I2501, Snapdragon 8 Elite, 12 GB
+Device     iQOO 15, Snapdragon 8 Elite, 12 GB
+           (Android reports it as "vivo I2501" -
+            iQOO is a vivo sub-brand, I2501 is the
+            internal model code. Both are correct.)
 Context    2048 tokens
 
 Endpoints

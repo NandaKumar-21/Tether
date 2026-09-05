@@ -5,28 +5,26 @@
     android:background="#0B0D0F"
     android:fitsSystemWindows="true"
     android:orientation="vertical"
-    android:paddingStart="22dp"
-    android:paddingEnd="22dp"
-    android:paddingTop="10dp"
-    android:paddingBottom="18dp">
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="20dp">
 
-    <!-- HEADER -->
+    <!-- 1. TETHER + status pill -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingBottom="18dp">
+        android:orientation="horizontal">
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:letterSpacing="0.22"
+            android:letterSpacing="0.24"
             android:text="TETHER"
-            android:textColor="#E6EAEE"
-            android:textSize="26sp"
-            android:textStyle="bold" />
+            android:textColor="#8A939C"
+            android:textSize="15sp" />
 
         <TextView
             android:id="@+id/statusPill"
@@ -34,22 +32,24 @@
             android:layout_height="wrap_content"
             android:background="@drawable/pill_bg"
             android:backgroundTint="#7A8590"
-            android:letterSpacing="0.12"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
+            android:letterSpacing="0.14"
+            android:paddingStart="11dp"
+            android:paddingEnd="11dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:text="LOADING"
             android:textColor="#0B0D0F"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
     </LinearLayout>
 
-    <!-- STATUS BLOCK -->
+    <!-- 2. three numbers -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="56dp"
+        android:baselineAligned="false"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -76,7 +76,7 @@
 
             <TextView
                 style="@style/MetricLabel"
-                android:text="TOKENS/SEC" />
+                android:text="TOK/SEC" />
 
             <TextView
                 android:id="@+id/tpsValue"
@@ -104,88 +104,58 @@
 
     </LinearLayout>
 
-    <TextView
-        style="@style/MetricLabel"
-        android:layout_marginTop="16dp"
-        android:text="MODEL" />
-
-    <TextView
-        android:id="@+id/modelValue"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:fontFeatureSettings="tnum"
-        android:singleLine="true"
-        android:ellipsize="end"
-        android:text="—"
-        android:textColor="#C7D0D9"
-        android:textSize="20sp" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:layout_marginTop="18dp"
-        android:layout_marginBottom="14dp"
-        android:background="#1E252B" />
-
-    <TextView
-        style="@style/MetricLabel"
-        android:text="LATEST ANSWER" />
-
-    <!-- ANSWER AREA -->
+    <!-- 3. the answer -->
     <ScrollView
         android:id="@+id/answerScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="56dp"
         android:clipToPadding="false"
-        android:scrollbars="vertical">
+        android:scrollbars="none">
 
         <TextView
             android:id="@+id/answerText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lineSpacingMultiplier="1.4"
-            android:paddingBottom="12dp"
-            android:text="waiting for the first request"
-            android:textColor="#C7D0D9"
+            android:paddingBottom="16dp"
+            android:text=""
+            android:textColor="#F2F5F7"
             android:textSize="18sp" />
 
     </ScrollView>
 
-    <!-- ACTIONS -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="14dp"
+        android:layout_marginTop="28dp"
         android:orientation="horizontal">
 
-        <!-- AppCompatButton, not Button: the Material theme swaps <Button> for
-             MaterialButton, which ignores android:background and forces its own tint. -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/scanBtn"
             android:layout_width="0dp"
-            android:layout_height="58dp"
-            android:layout_marginEnd="10dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="12dp"
             android:layout_weight="1"
             android:background="@drawable/btn_bg"
-            android:letterSpacing="0.14"
+            android:letterSpacing="0.16"
             android:stateListAnimator="@null"
             android:text="SCAN"
-            android:textColor="#E6EAEE"
-            android:textSize="16sp" />
+            android:textColor="#C7D0D9"
+            android:textSize="15sp" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/micBtn"
             android:layout_width="0dp"
-            android:layout_height="58dp"
+            android:layout_height="56dp"
             android:layout_weight="1"
             android:background="@drawable/btn_bg"
-            android:letterSpacing="0.14"
+            android:letterSpacing="0.16"
             android:stateListAnimator="@null"
             android:text="MIC"
-            android:textColor="#E6EAEE"
-            android:textSize="16sp" />
+            android:textColor="#C7D0D9"
+            android:textSize="15sp" />
 
     </LinearLayout>
 

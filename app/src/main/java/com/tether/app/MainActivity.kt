@@ -27,7 +27,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var backendValue: TextView
     private lateinit var tpsValue: TextView
     private lateinit var requestsValue: TextView
-    private lateinit var modelValue: TextView
     private lateinit var answerText: TextView
     private lateinit var answerScroll: ScrollView
 
@@ -49,7 +48,6 @@ class MainActivity : AppCompatActivity() {
         backendValue = findViewById(R.id.backendValue)
         tpsValue = findViewById(R.id.tpsValue)
         requestsValue = findViewById(R.id.requestsValue)
-        modelValue = findViewById(R.id.modelValue)
         answerText = findViewById(R.id.answerText)
         answerScroll = findViewById(R.id.answerScroll)
 
@@ -95,7 +93,6 @@ class MainActivity : AppCompatActivity() {
         backendValue.text = s.backend.substringBefore('/').trim().ifEmpty { "—" }
         tpsValue.text = "%.1f".format(s.lastTokensPerSec)
         requestsValue.text = s.requestsServed.get().toString()
-        modelValue.text = s.modelName
 
         // Only re-render the answer when a new one arrives, so spans are not rebuilt
         // 2x a second and the scroll position is left alone while reading.
@@ -103,20 +100,32 @@ class MainActivity : AppCompatActivity() {
             shownAnswerAt = s.lastAnswerAtMs
             val body = s.lastAnswer
             if (body.isBlank()) {
-                answerText.text = "the model returned an empty reply"
+                answerText.setTextColor(0xFF6B7680.toInt())
+                answerText.text = "empty reply"
             } else {
+                answerText.setTextColor(0xFFF2F5F7.toInt())
                 answerText.text = MarkdownLite.render(body)
-                answerScroll.post { answerScroll.fullScroll(ScrollView.FOCUS_DOWN) }
+                answerScroll.post { answerScroll.fullScroll(ScrollView.FOCUS_UP) }
             }
         }
 
         if (s.lastAnswerAtMs == 0L) {
+            answerText.setTextColor(0xFF6B7680.toInt())
             answerText.text = if (s.modelLoaded) {
-                "ready on ${Build.MANUFACTURER} ${Build.MODEL} — waiting for the first request"
+                "ready on ${deviceName()}"
             } else {
-                "loading ${s.modelName} onto the GPU"
+                "loading ${s.modelName}"
             }
         }
+    }
+
+    /**
+     * Android reports this phone as "vivo I2501" because iQOO is a vivo sub-brand
+     * and I2501 is the internal code. Show the name people actually recognise.
+     */
+    private fun deviceName(): String = when (Build.MODEL) {
+        "I2501" -> "iQOO 15"
+        else -> "${Build.MANUFACTURER} ${Build.MODEL}"
     }
 
     private fun setPill(label: String, color: Int) {
